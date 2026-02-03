@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Отчет</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--tg-theme-bg-color, #f0f0f0); color: var(--tg-theme-text-color, #000000); padding: 20px; box-sizing: border-box; }
+        .container { max-width: 400px; margin: 0 auto; }
+        
+        /* Стили для формы */
+        .form-group { margin-bottom: 20px; background: var(--tg-theme-secondary-bg-color, #ffffff); padding: 15px; border-radius: 10px; border: 1px solid #ddd; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; }
+        input[type="number"] { width: 100%; padding: 10px; box-sizing: border-box; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; }
+        input[type="number"]:focus { border-color: #3390ec; outline: none; }
+        
+        /* Кнопка */
+        .btn { width: 100%; padding: 15px; background-color: var(--tg-theme-button-color, #3390ec); color: var(--tg-theme-button-text-color, #ffffff); border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+        .btn:active { opacity: 0.8; }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        /* Экран ошибки/загрузки */
+        #loading, #access-denied, #main-form, #success-screen { display: none; }
+        
+        .error-box { background: #ffdede; color: #b30000; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ffbaba; }
+        .id-display { font-family: monospace; font-size: 18px; background: #eee; padding: 5px; border-radius: 4px; display: inline-block; margin-top: 5px; }
+        
+        h2 { margin-top: 0; text-align: center; }
+        .success-icon { font-size: 50px; display: block; text-align: center; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Экран загрузки -->
+    <div id="loading" style="display:block; text-align:center;">
+        <p>Инициализация...</p>
+    </div>
+
+    <!-- Экран отказа в доступе -->
+    <div id="access-denied">
+        <div class="error-box">
+            ⛔ <b>Доступ запрещен</b><br>
+            Вашего ID нет в списке сотрудников.<br><br>
+            Ваш ID:<br>
+            <span class="id-display" id="user-id-display">---</span>
+            <br><br>
+            Скопируйте ID и отправьте администратору.
+        </div>
+    </div>
+
+    <!-- Основная форма -->
+    <div id="main-form">
+        <h2>Оформление отчета</h2>
+        
+        <div class="form-group">
+            <label>Товар 1 (шт):</label>
+            <input type="number" id="item1" placeholder="0" min="0">
+        </div>
+        
+        <div class="form-group">
+             <label>Товар 2 (шт):</label>
+             <input type="number" id="item2" placeholder="0" min="0">
+        </div>
+        
+        <!-- Можно добавить больше полей сюда -->
+
+        <button class="btn" id="sendBtn" onclick="sendData()">ОТПРАВИТЬ ОТЧЕТ</button>
+        <p id="send-status" style="text-align:center; font-size:12px; color:gray; margin-top:10px;"></p>
+    </div>
+
+    <!-- Экран успеха -->
+    <div id="success-screen" style="text-align: center;">
+        <span class="success-icon">✅</span>
+        <h3>Отчет отправлен!</h3>
+        <p>Можно закрыть окно.</p>
+        <button class="btn" onclick="window.Telegram.WebApp.close()">ЗАКРЫТЬ</button>
+    </div>
+
+</div>
+
+<script>
+    // --- КОНФИГУРАЦИЯ ---
+    
+    // ВСТАВЬ СЮДА ССЫЛКУ ИЗ GOOGLE APPS SCRIPT (ШАГ 1):
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaZPkfQTX8QYPRbRFRsGhOlVvDW3lJCDQU5sDZIgtgEkrUyuhX92Vbgiif1Qjjw5vs/exec";
+
+    // СПИСОК РАЗРЕШЕННЫХ ID (Дублируем здесь для мгновенной проверки интерфейса)
+    const ALLOWED_USERS_FRONTEND = [
+        612558206, 
+        987654321
+    ];
+
+    // --------------------
+
+    let tg = window.Telegram.WebApp;
+    let currentUser = null;
+
+    window.onload = function() {
+        tg.ready();
+        tg.expand(); // Разворачиваем на весь экран
+
+        // Проверяем initDataUnsafe (теперь она точно будет, т.к. нет редиректов Гугла)
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            currentUser = tg.initDataUnsafe.user;
+            checkAccess(currentUser.id);
+        } else {
+            // Если открыли в браузере (для тестов можно закомментировать)
+            document.getElementById('loading').innerHTML = "Ошибка: Откройте через Telegram";
+            // ДЛЯ ТЕСТОВ в БРАУЗЕРЕ раскомментируй строку ниже и закомментируй верхнюю:
+            // currentUser = { id: 612558206, first_name: "TestUser", username: "tester" }; checkAccess(612558206);
+        }
+    };
+
+    function checkAccess(userId) {
+        document.getElementById('loading').style.display = 'none';
+        
+        // Приводим к строкам для верности сравнения
+        const allowed = ALLOWED_USERS_FRONTEND.map(String);
+        
+        if (allowed.includes(String(userId))) {
+            // ДОСТУП РАЗРЕШЕН
+            document.getElementById('main-form').style.display = 'block';
+        } else {
+            // ДОСТУП ЗАПРЕЩЕН
+            document.getElementById('access-denied').style.display = 'block';
+            document.getElementById('user-id-display').innerText = userId;
+        }
+    }
+
+    function sendData() {
+        // Собираем данные
+        const item1 = document.getElementById('item1').value;
+        const item2 = document.getElementById('item2').value;
+
+        // Если все пусто - не отправляем
+        if (!item1 && !item2) {
+            tg.showAlert("Заполните хотя бы одно поле");
+            return;
+        }
+
+        const btn = document.getElementById('sendBtn');
+        const status = document.getElementById('send-status');
+        
+        btn.disabled = true;
+        btn.innerText = "Отправка...";
+        
+        // Получаем текущую дату
+        const now = new Date();
+        const dateStr = now.getFullYear() + '-' + (now.getMonth()+1).toString().padStart(2,'0') + '-' + now.getDate().toString().padStart(2,'0');
+        
+        // Формируем имя: First Name + Last Name (если есть) + Username (если есть)
+        let fullName = currentUser.first_name;
+        if (currentUser.last_name) fullName += " " + currentUser.last_name;
+        if (currentUser.username) fullName += " (@" + currentUser.username + ")";
+
+        const payload = {
+            userId: currentUser.id,
+            username: fullName,
+            date: dateStr,
+            items: {
+                "Товар 1": item1 || 0,
+                "Товар 2": item2 || 0
+            }
+        };
+
+        // Отправляем на Google Script
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Важно для скриптов Гугла, чтобы не было ошибок CORS в консоли
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            // Режим no-cors не возвращает ответ, поэтому считаем, что все ок, если запрос ушел
+            document.getElementById('main-form').style.display = 'none';
+            document.getElementById('success-screen').style.display = 'block';
+            // Вибрация успеха (фишка Telegram)
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        }).catch(err => {
+            status.innerText = "Ошибка сети: " + err;
+            btn.disabled = false;
+            btn.innerText = "ПОВТОРИТЬ";
+        });
+    }
+</script>
+
+</body>
+</html>
