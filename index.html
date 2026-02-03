@@ -3,246 +3,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ежедневный отчет</title>
+    <title>Отчет по складу</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg-color: #ffffff;
-            --text-color: #000000;
-            --secondary-bg: #f2f2f7;
-            --button-color: #3390ec;
-            --button-text: #ffffff;
-        }
-
-        /* Адаптация под темную тему Телеграм */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-color: #1c1c1e;
-                --text-color: #ffffff;
-                --secondary-bg: #2c2c2e;
-                --button-color: #3390ec;
-                --button-text: #ffffff;
-            }
-        }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: #ffffff;
             margin: 0;
             padding: 20px;
-            box-sizing: border-box;
-            -webkit-font-smoothing: antialiased;
+            color: #000;
+            -webkit-tap-highlight-color: transparent; /* Убирает синюю подсветку на Android */
         }
 
-        h2 {
-            text-align: center;
-            margin-bottom: 20px;
-            font-weight: 600;
+        /* Поле даты */
+        .date-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
         }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--text-color);
-            opacity: 0.8;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        textarea,
-        select {
-            width: 100%;
-            padding: 12px;
+        input[type="date"] {
+            font-size: 18px;
+            padding: 10px;
+            border: 2px solid #ddd;
             border-radius: 12px;
-            border: none;
-            background-color: var(--secondary-bg);
-            color: var(--text-color);
-            font-size: 16px;
-            box-sizing: border-box;
-            outline: none;
-            /* Убираем стили iOS */
-            -webkit-appearance: none; 
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        /* Особый стиль для кнопки (имитация MainButton телеграма, если нужно, или просто красивая кнопка) */
-        .submit-btn {
+            background: #f9f9f9;
+            font-weight: bold;
+            color: #333;
             width: 100%;
-            padding: 14px;
-            background-color: var(--button-color);
-            color: var(--button-text);
-            border: none;
-            border-radius: 10px;
-            font-size: 17px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            margin-top: 10px;
-        }
-
-        .submit-btn:active {
-            opacity: 0.8;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        #loading, #success-screen {
+            max-width: 300px;
             text-align: center;
-            padding-top: 50px;
         }
-        
-        /* Анимация галочки */
-        .checkmark {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            display: block;
-            stroke-width: 2;
-            stroke: #fff;
-            stroke-miterlimit: 10;
-            margin: 10% auto;
-            box-shadow: inset 0px 0px 0px #7ac142;
-            animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
-        }
-        .checkmark__circle {
-            stroke-dasharray: 166;
-            stroke-dashoffset: 166;
-            stroke-width: 2;
-            stroke-miterlimit: 10;
-            stroke: #7ac142;
-            fill: none;
-            animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
-        }
-        .checkmark__check {
-            transform-origin: 50% 50%;
-            stroke-dasharray: 48;
-            stroke-dashoffset: 48;
-            animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
-        }
-        @keyframes stroke { 100% { stroke-dashoffset: 0; } }
-        @keyframes scale { 0%, 100% { transform: none; } 50% { transform: scale3d(1.1, 1.1, 1); } }
-        @keyframes fill { 100% { box-shadow: inset 0px 0px 0px 30px #7ac142; } }
 
+        /* Список товаров */
+        .item-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            justify-content: space-between;
+        }
+
+        /* Кнопка товара */
+        .item-btn {
+            flex-grow: 1;
+            background-color: #f0f0f0; /* Серый фон */
+            color: #333;
+            border: none;
+            padding: 15px 10px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 800; /* Жирный шрифт */
+            text-align: left; /* Текст слева */
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .item-btn.active {
+            background-color: #007bff; /* Синий активный */
+            color: white;
+            box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+        }
+
+        /* Поле ввода количества */
+        .qty-input {
+            width: 0; /* Скрыто по умолчанию */
+            opacity: 0;
+            padding: 0;
+            margin-left: 0;
+            border: none;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            background: white;
+            border-bottom: 2px solid #007bff;
+            font-size: 18px;
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+            border-radius: 0;
+            outline: none;
+        }
+
+        /* Когда товар активен, показываем инпут */
+        .item-row.active .qty-input {
+            width: 70px;
+            opacity: 1;
+            padding: 10px 5px;
+            margin-left: 10px; /* Отступ справа от кнопки */
+        }
+
+        /* Главная кнопка отправки */
+        .main-btn {
+            width: 100%;
+            padding: 18px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .main-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Состояния загрузки и успеха */
+        #loading, #success-screen {
+            display: none;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .checkmark {
+            font-size: 60px;
+            color: #28a745;
+        }
     </style>
 </head>
 <body>
 
 <div id="app">
-    <h2>Ежедневный отчет</h2>
-    <form id="reportForm">
-        
-        <div class="form-group">
-            <label for="calls">Количество звонков</label>
-            <input type="number" id="calls" inputmode="numeric" placeholder="0" required>
-        </div>
+    <!-- Выбор даты -->
+    <div class="date-container">
+        <input type="date" id="report-date">
+    </div>
 
-        <div class="form-group">
-            <label for="sales">Количество продаж</label>
-            <input type="number" id="sales" inputmode="numeric" placeholder="0" required>
+    <!-- Список кнопок -->
+    <div id="items-list">
+        <!-- Кнопки генерируются JS, но структура такая:
+        <div class="item-row">
+            <button class="item-btn">Название</button>
+            <input type="number" class="qty-input">
         </div>
+        -->
+    </div>
 
-        <div class="form-group">
-            <label for="income">Сумма выручки (₽)</label>
-            <input type="number" id="income" inputmode="numeric" placeholder="0" required>
-        </div>
-
-        <div class="form-group">
-            <label for="comment">Комментарий (планы/проблемы)</label>
-            <textarea id="comment" placeholder="Напишите комментарий..."></textarea>
-        </div>
-
-        <button type="button" class="submit-btn" onclick="submitForm()">Отправить отчет</button>
-    </form>
+    <button class="main-btn" onclick="sendData()" id="send-btn">Отправить отчет</button>
 </div>
 
-<div id="loading" class="hidden">
-    <p>Отправка данных...</p>
-</div>
-
-<div id="success-screen" class="hidden">
-    <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
-        <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
-        <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
-    </svg>
-    <h3>Готово!</h3>
-    <p>Отчет успешно отправлен.</p>
+<!-- Экраны состояния -->
+<div id="loading">⏳ Отправка данных...</div>
+<div id="success-screen">
+    <div class="checkmark">✅</div>
+    <h2>Отчет отправлен!</h2>
+    <p>Данные в таблице и в чате.</p>
+    <button class="main-btn" onclick="Telegram.WebApp.close()">Закрыть</button>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.expand(); // Развернуть на весь экран
+    tg.expand(); // Раскрыть на весь экран
 
-    // --- ВСТАВЬТЕ СЮДА ВАШУ ССЫЛКУ ИЗ GOOGLE APPS SCRIPT ---
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyU4SfLkxavKyPQBGNQ3xWFGUnYGZBr7vXYC1jZYVDqbSMUvRzmvTAndaserZvQQ8X9/exec'; 
-    // -------------------------------------------------------
+    // ВСТАВЬ СЮДА URL ИЗ DEPLOY В GOOGLE APPS SCRIPT
+    const SCRIPT_URL = "https://script.google.com/macros/s/ВАШ_ДЛИННЫЙ_ID/exec";
 
-    function submitForm() {
-        const calls = document.getElementById('calls').value;
-        const sales = document.getElementById('sales').value;
-        const income = document.getElementById('income').value;
-        const comment = document.getElementById('comment').value;
+    // Конфигурация полей (key должен совпадать с именами в Google Script)
+    const ITEMS = [
+        { key: "controller", label: "Контроллер" },
+        { key: "tracker", label: "Трекер" },
+        { key: "motor", label: "Мотор-колесо" },
+        { key: "battery", label: "АКБ" },
+        { key: "lock", label: "Замок" },
+        { key: "dashboard", label: "Дашборд" },
+        { key: "handle", label: "Ручка тормоза" }
+    ];
 
-        if(!calls || !sales || !income) {
-            tg.showPopup({
-                title: 'Ошибка',
-                message: 'Заполните все числовые поля',
-                buttons: [{type: 'ok'}]
-            });
-            return;
-        }
+    // Инициализация
+    const listContainer = document.getElementById('items-list');
+    const dateInput = document.getElementById('report-date');
+    dateInput.valueAsDate = new Date(); // Установить сегодняшнюю дату
 
-        // Данные пользователя
-        const user = tg.initDataUnsafe.user || { first_name: 'Unknown', username: 'anon' };
+    // Генерация кнопок
+    ITEMS.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.id = `row-${item.key}`;
+
+        // Кнопка
+        const btn = document.createElement('button');
+        btn.className = 'item-btn';
+        btn.innerText = item.label;
+        btn.onclick = () => toggleItem(item.key);
+
+        // Инпут
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'qty-input';
+        input.id = `input-${item.key}`;
+        input.min = "1";
+        input.placeholder = "Кол-во";
+        // Валидация: не даем ввести минус или 0 вручную через клавиатуру
+        input.oninput = function() {
+            if(this.value < 1 && this.value !== "") this.value = "";
+        };
+
+        row.appendChild(btn);
+        row.appendChild(input);
+        listContainer.appendChild(row);
+    });
+
+    // Логика переключения
+    function toggleItem(key) {
+        const row = document.getElementById(`row-${key}`);
+        const btn = row.querySelector('.item-btn');
+        const input = row.querySelector('.qty-input');
         
-        // --- ИЗМЕНЕНИЕ ЗДЕСЬ: ЖЕСТКАЯ ПРИВЯЗКА К ID ЧАТА ---
-        const chatId = '-1003850354146'; 
-        // --------------------------------------------------
+        const isActive = btn.classList.contains('active');
 
-        // Показать экран загрузки
+        if (isActive) {
+            // Отключаем
+            btn.classList.remove('active');
+            row.classList.remove('active');
+            input.value = ""; // Очищаем значение
+            if(tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+        } else {
+            // Включаем
+            btn.classList.add('active');
+            row.classList.add('active');
+            input.value = "1"; // Дефолтное значение
+            input.focus(); // Сразу фокус на ввод
+            if(tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+        }
+    }
+
+    function sendData() {
+        // Собираем данные
+        const rawDate = dateInput.value;
+        const resultItems = {};
+        
+        // Переделываем формат даты из YYYY-MM-DD в DD.MM.YYYY
+        const [year, month, day] = rawDate.split('-');
+        const formattedDate = `${day}.${month}.${year}`;
+
+        ITEMS.forEach(item => {
+            const input = document.getElementById(`input-${item.key}`);
+            const row = document.getElementById(`row-${item.key}`);
+            // Если строка активна и введено значение
+            if (row.classList.contains('active') && input.value) {
+                resultItems[item.key] = parseInt(input.value);
+            }
+        });
+
+        // Данные пользователя Telegram
+        const user = tg.initDataUnsafe.user || { first_name: "Неизвестный", id: 0 };
+        // Определяем Chat ID (если приложение открыто в группе, он будет в initDataUnsafe.chat)
+        // Если открыто в личке, берем user.id
+        const chatId = '-1003850354146';
+        // Формируем имя
+        let fullName = user.first_name;
+        if (user.last_name) fullName += " " + user.last_name;
+        if (user.username) fullName += " (@" + user.username + ")";
+
+        const payload = {
+            date: formattedDate,
+            items: resultItems,
+            username: fullName,
+            userId: user.id,
+            chatId: chatId // Важно для отправки сообщения в группу
+        };
+
+        // UI отправки
         document.getElementById('app').style.display = 'none';
         document.getElementById('loading').style.display = 'block';
 
-        const data = {
-            chat_id: chatId,
-            user_name: user.first_name + (user.last_name ? ' ' + user.last_name : ''),
-            username: user.username ? '@' + user.username : 'Нет юзернейма',
-            calls: calls,
-            sales: sales,
-            income: income,
-            comment: comment
-        };
-
-        // Отправка (POST запрос)
-        fetch(GOOGLE_SCRIPT_URL, {
+        fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // Важно для Google Script
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         }).then(() => {
-            // Успех
             document.getElementById('loading').style.display = 'none';
             document.getElementById('success-screen').style.display = 'block';
             if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            
-            // Закрыть приложение через 3 секунды (по желанию - можно убрать)
-            setTimeout(() => {
-                tg.close();
-            }, 3000);
-
         }).catch(err => {
             alert("Ошибка: " + err);
             document.getElementById('app').style.display = 'block';
